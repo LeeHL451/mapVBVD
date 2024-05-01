@@ -353,17 +353,23 @@ methods
         this.NCol = max(this.NCol);
         this.NCha = max(this.NCha);
 
-        if strcmp(this.dataType,'refscan')
+        if strcmp(this.dataType,'image') || strcmp(this.dataType,'refscan')
             %pehses: check for lines with 'negative' line/partition numbers
             %this can happen when the reference scan line/partition range
             %exceeds the one of the actual imaging scan
-            if this.NLin>65500  %uint overflow check
-                this.Lin  = mod(this.Lin + (65536 - min(this.Lin(this.Lin>65500))),65536)+1;
-                this.NLin = max(this.Lin);
-            end
-            if this.NPar>65500  %uint overflow check
-                this.Par  = mod(this.Par + (65536 - min(this.Par(this.Par>65500))),65536)+1;
-                this.NPar = max(this.Par);
+            Nacqdims = this.NPar*this.NSli*this.NAve*this.NPhs...
+                *this.NEco*this.NRep*this.NSet;
+
+            Noverflow= 1+floor((this.NAcq-(Nacqdims*65536))/65536);
+            if(Noverflow>0)
+                for of=1:(Noverflow)
+                    this.Lin((65536*of*Nacqdims)+1:end) = this.Lin((65536*of*Nacqdims)+1:end) + 65536;
+                    if(this.NPar==(65536*of+1))
+                        this.Par((65536*of*Nacqdims)+1:end) = this.Par((65536*of*Nacqdims)+1:end) + 65536;
+                    end
+                    this.NLin = max(this.Lin);
+                    this.NPar = max(this.Par);
+                end
             end
         end
 
