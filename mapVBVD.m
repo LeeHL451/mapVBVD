@@ -46,7 +46,7 @@ function twix_obj = mapVBVD(filename,varargin)
 %                            os-removal or reflected lines. Also for random acquisitions.
 %  Jonas Bause   18.11.16, receiver phase for ramp-sampling fixed, now takes into account  
 %  Chris Mirkes & PE       offcenter shifts in readout direction
-%  H.-L. Lee     06.04.23, extract PMU data to twix_obj.PMUdata for XA2* & XA3* systems.
+%  H.-L. Lee     06.04.23, extract PMU data to twix_obj.PMUdata for XA2* & XA3* & XA5* systems.
 %                          store both raw and interpolated waveforms.
 % 
 % Input:
@@ -542,8 +542,8 @@ for s=1:NScans
     end
     clear  mdh  tmpMdh  filePos  isCurrScan
     
-    % H.-L. Lee, extract PMU data from mdh and interpolatethe waveforms to
-    % match image timestamps
+    % H.-L. Lee, extract PMU data from mdh and interpolate the waveforms to
+    % match ADC timestamps
     try
         PMUdata = evalMDH_syncData( mdh_syncdata, version, twix_obj{s}.image.timestamp);
         twix_obj{s}.PMUdata = PMUdata;
@@ -627,7 +627,7 @@ function [mdh_blob, filePos, isEOF, mdh_syncdata] = loop_mdh_read( fid, version,
     filePos  = zeros(0, 1, class(cPos));  % avoid bug in Matlab 2013b: https://scivision.co/matlab-fseek-bug-with-uint64-offset/
 
     % H.-L. Lee, setup for PMU data
-    if strncmp(VerString,'XA3',3)
+    if strncmp(VerString,'XA3',3) || strncmp(VerString,'XA5',3) || strncmp(VerString,'XA6',3)
         syncdata_length = 1632;
     elseif strncmp(VerString,'XA2',3)
         syncdata_length = 1120;
@@ -871,7 +871,7 @@ mask.MDH_IMASCAN( noImaScan ) = 0;
 end % of evalMDH()
 
 
-% H.-L. Lee, read PMU data and timestamps and store them in the mdh struct
+% H.-L. Lee, extract PMU data and timestamps and store them in the mdh struct
 function PMUdata = evalMDH_syncData( mdh_blob, version ,timestamps)
 
 vec = @(x) x(:);
@@ -926,6 +926,7 @@ end
 
 PMUdata.raw = mdh;
 try
+	% sync PMU data to ADC timestamps
     PMUdata.EKG  = interp1(mdh.EKG.TimeStamp, double(mdh.EKG.data), double(timestamps),'linear','extrap').';
     PMUdata.PULS = interp1(mdh.PULS.TimeStamp,double(mdh.PULS.data),double(timestamps),'linear','extrap');
     PMUdata.RESP = interp1(mdh.RESP.TimeStamp,double(mdh.RESP.data),double(timestamps),'linear','extrap');
