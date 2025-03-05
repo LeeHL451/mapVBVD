@@ -2,6 +2,11 @@
 
 Reads Siemens raw .dat file from VB/VD MRI raw data.
 
+This modified version reads physiological data embedded in the .dat file, and interpolates them to sync with ADC time points. Both raw signal and interpolated ones will be stored as a struct in `twixobj.PMUdata`.
+
+Tested with XA20A. XA31A, and XA51A raw data.
+
+-----
 Author: Philipp Ehses (philipp.ehses@dzne.de)
 
 Input: filename or simply meas. id, e.g. mapVBVD(122) (if file is in same path)
