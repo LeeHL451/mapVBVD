@@ -664,7 +664,7 @@ function [mdh_blob, filePos, isEOF, mdh_syncdata] = loop_mdh_read( fid, version,
         syncdata_length = 1120;
     elseif strncmp(VerString,'XA60',4)
         syncdata_length = 960;
-      elseif strncmp(VerString,'XA61',4)
+    elseif strncmp(VerString,'XA61',4)
         syncdata_length = 1204;%9632;
     else
         syncdata_length = 0;
