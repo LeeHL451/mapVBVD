@@ -392,21 +392,21 @@ for s=1:NScans
         %donothing
     end
     % declare data objects:
-    twix_obj{s}.image         = twix_map_obj_lee(arg,'image',filename,version,rstraj);
-    twix_obj{s}.noise         = twix_map_obj_lee(arg,'noise',filename,version);
-    twix_obj{s}.phasecor      = twix_map_obj_lee(arg,'phasecor',filename,version,rstraj);
-    twix_obj{s}.phasestab     = twix_map_obj_lee(arg,'phasestab',filename,version,rstraj);
-    twix_obj{s}.phasestabRef0 = twix_map_obj_lee(arg,'phasestab_ref0',filename,version,rstraj);
-    twix_obj{s}.phasestabRef1 = twix_map_obj_lee(arg,'phasestab_ref1',filename,version,rstraj);
-    twix_obj{s}.refscan       = twix_map_obj_lee(arg,'refscan',filename,version,rstraj);
-    twix_obj{s}.refscanPC     = twix_map_obj_lee(arg,'refscan_phasecor',filename,version,rstraj);
-    twix_obj{s}.refscanPS     = twix_map_obj_lee(arg,'refscan_phasestab',filename,version,rstraj);
-    twix_obj{s}.refscanPSRef0 = twix_map_obj_lee(arg,'refscan_phasestab_ref0',filename,version,rstraj);
-    twix_obj{s}.refscanPSRef1 = twix_map_obj_lee(arg,'refscan_phasestab_ref1',filename,version,rstraj);
-    twix_obj{s}.RTfeedback    = twix_map_obj_lee(arg,'rtfeedback',filename,version,rstraj);
-    twix_obj{s}.vop           = twix_map_obj_lee(arg,'vop',filename,version); % tx-array rf pulses
-    twix_obj{s}.prescanbody = twix_map_obj_lee(arg,'prescanbody',filename,version,rstraj); %add prescan with body coil
-    twix_obj{s}.prescansurface = twix_map_obj_lee(arg,'prescansurface',filename,version,rstraj); %add prescan with surface coil
+    twix_obj{s}.image         = twix_map_obj(arg,'image',filename,version,rstraj);
+    twix_obj{s}.noise         = twix_map_obj(arg,'noise',filename,version);
+    twix_obj{s}.phasecor      = twix_map_obj(arg,'phasecor',filename,version,rstraj);
+    twix_obj{s}.phasestab     = twix_map_obj(arg,'phasestab',filename,version,rstraj);
+    twix_obj{s}.phasestabRef0 = twix_map_obj(arg,'phasestab_ref0',filename,version,rstraj);
+    twix_obj{s}.phasestabRef1 = twix_map_obj(arg,'phasestab_ref1',filename,version,rstraj);
+    twix_obj{s}.refscan       = twix_map_obj(arg,'refscan',filename,version,rstraj);
+    twix_obj{s}.refscanPC     = twix_map_obj(arg,'refscan_phasecor',filename,version,rstraj);
+    twix_obj{s}.refscanPS     = twix_map_obj(arg,'refscan_phasestab',filename,version,rstraj);
+    twix_obj{s}.refscanPSRef0 = twix_map_obj(arg,'refscan_phasestab_ref0',filename,version,rstraj);
+    twix_obj{s}.refscanPSRef1 = twix_map_obj(arg,'refscan_phasestab_ref1',filename,version,rstraj);
+    twix_obj{s}.RTfeedback    = twix_map_obj(arg,'rtfeedback',filename,version,rstraj);
+    twix_obj{s}.vop           = twix_map_obj(arg,'vop',filename,version); % tx-array rf pulses
+    twix_obj{s}.prescanbody = twix_map_obj(arg,'prescanbody',filename,version,rstraj); %add prescan with body coil
+    twix_obj{s}.prescansurface = twix_map_obj(arg,'prescansurface',filename,version,rstraj); %add prescan with surface coil
     
     % print reader version information
     if s==1
