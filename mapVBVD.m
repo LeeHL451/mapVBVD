@@ -199,6 +199,7 @@ arg.bReadRefPCScan  = true;
 arg.bReadRTfeedback = true;
 arg.bReadPhaseStab  = true;
 arg.bReadHeader     = true;
+arg.bReadPrescan     = true;
 
 k=1;
 while k <= numel(varargin)
@@ -295,7 +296,7 @@ secondInt = fread(fid, 1, 'uint32');
 % lazy software version check (VB or VD?)
 if and(firstInt < 10000, secondInt <= 64)
     version = 'vd';
-    disp('Software version: VD (!?)');
+    disp('Software version: VD/VE/XA (!?)');
 
     % number of different scans in file stored in 2nd in
     NScans = secondInt;
@@ -382,21 +383,30 @@ for s=1:NScans
             isInplacePATref = str2double(twix_obj{s}.hdr.MeasYaps.sPat.ucRefScanMode(end))==2;
         end
     end
-
+    isPrescan = false;
+    try
+        if ( (twix_obj{s}.hdr.MeasYaps.sPreScanNormalizeFilter.ucOn == 1) && (s==1) )
+            isPrescan=true;
+        end
+    catch
+        %donothing
+    end
     % declare data objects:
-    twix_obj{s}.image         = twix_map_obj(arg,'image',filename,version,rstraj);
-    twix_obj{s}.noise         = twix_map_obj(arg,'noise',filename,version);
-    twix_obj{s}.phasecor      = twix_map_obj(arg,'phasecor',filename,version,rstraj);
-    twix_obj{s}.phasestab     = twix_map_obj(arg,'phasestab',filename,version,rstraj);
-    twix_obj{s}.phasestabRef0 = twix_map_obj(arg,'phasestab_ref0',filename,version,rstraj);
-    twix_obj{s}.phasestabRef1 = twix_map_obj(arg,'phasestab_ref1',filename,version,rstraj);
-    twix_obj{s}.refscan       = twix_map_obj(arg,'refscan',filename,version,rstraj);
-    twix_obj{s}.refscanPC     = twix_map_obj(arg,'refscan_phasecor',filename,version,rstraj);
-    twix_obj{s}.refscanPS     = twix_map_obj(arg,'refscan_phasestab',filename,version,rstraj);
-    twix_obj{s}.refscanPSRef0 = twix_map_obj(arg,'refscan_phasestab_ref0',filename,version,rstraj);
-    twix_obj{s}.refscanPSRef1 = twix_map_obj(arg,'refscan_phasestab_ref1',filename,version,rstraj);
-    twix_obj{s}.RTfeedback    = twix_map_obj(arg,'rtfeedback',filename,version,rstraj);
-    twix_obj{s}.vop           = twix_map_obj(arg,'vop',filename,version); % tx-array rf pulses
+    twix_obj{s}.image         = twix_map_obj_lee(arg,'image',filename,version,rstraj);
+    twix_obj{s}.noise         = twix_map_obj_lee(arg,'noise',filename,version);
+    twix_obj{s}.phasecor      = twix_map_obj_lee(arg,'phasecor',filename,version,rstraj);
+    twix_obj{s}.phasestab     = twix_map_obj_lee(arg,'phasestab',filename,version,rstraj);
+    twix_obj{s}.phasestabRef0 = twix_map_obj_lee(arg,'phasestab_ref0',filename,version,rstraj);
+    twix_obj{s}.phasestabRef1 = twix_map_obj_lee(arg,'phasestab_ref1',filename,version,rstraj);
+    twix_obj{s}.refscan       = twix_map_obj_lee(arg,'refscan',filename,version,rstraj);
+    twix_obj{s}.refscanPC     = twix_map_obj_lee(arg,'refscan_phasecor',filename,version,rstraj);
+    twix_obj{s}.refscanPS     = twix_map_obj_lee(arg,'refscan_phasestab',filename,version,rstraj);
+    twix_obj{s}.refscanPSRef0 = twix_map_obj_lee(arg,'refscan_phasestab_ref0',filename,version,rstraj);
+    twix_obj{s}.refscanPSRef1 = twix_map_obj_lee(arg,'refscan_phasestab_ref1',filename,version,rstraj);
+    twix_obj{s}.RTfeedback    = twix_map_obj_lee(arg,'rtfeedback',filename,version,rstraj);
+    twix_obj{s}.vop           = twix_map_obj_lee(arg,'vop',filename,version); % tx-array rf pulses
+    twix_obj{s}.prescanbody = twix_map_obj_lee(arg,'prescanbody',filename,version,rstraj); %add prescan with body coil
+    twix_obj{s}.prescansurface = twix_map_obj_lee(arg,'prescansurface',filename,version,rstraj); %add prescan with surface coil
     
     % print reader version information
     if s==1
@@ -427,7 +437,7 @@ for s=1:NScans
     filePos( end ) = [];
 
     % get mdhs and masks for each scan, no matter if noise, image, RTfeedback etc:
-    [mdh, mask] = evalMDH( mdh_blob, version, isInplacePATref); % this is quasi-instant (< 1s) :-)    
+    [mdh, mask] = evalMDH( mdh_blob, version, isInplacePATref,isPrescan); % this is quasi-instant (< 1s) :-)    
     clear mdh_blob
 
     % Assign mdhs to their respective scans and parse it in the correct twix objects.
@@ -540,6 +550,26 @@ for s=1:NScans
         end
         twix_obj{s}.refscanPSRef1.readMDH( tmpMdh, filePos(isCurrScan) );
     end
+    % prescan
+    if isPrescan && arg.bReadPrescan
+        if s==1
+            clear tmpMdh
+            
+            isCurrScan = logical( mask.MDH_prescanbody );
+            for f = fieldnames( mdh ).'
+                tmpMdh.(f{1}) = mdh.(f{1})( isCurrScan, : );
+            end
+            twix_obj{s}.prescanbody.readMDH( tmpMdh, filePos(isCurrScan) );
+
+                    clear tmpMdh
+            isCurrScan = logical( mask.MDH_prescansurface );
+            for f = fieldnames( mdh ).'
+                tmpMdh.(f{1}) = mdh.(f{1})( isCurrScan, : );
+            end
+            twix_obj{s}.prescansurface.readMDH( tmpMdh, filePos(isCurrScan) );
+        end
+    end
+    
     clear  mdh  tmpMdh  filePos  isCurrScan
     
     % H.-L. Lee, extract PMU data from mdh and interpolate the waveforms to
@@ -555,7 +585,8 @@ for s=1:NScans
     for scan = { 'image', 'noise', 'phasecor', 'phasestab', ...
                  'phasestabRef0', 'phasestabRef1', 'refscan', ...
                  'refscanPC', 'refscanPS', 'refscanPSRef0', ...
-                 'refscanPSRef1', 'RTfeedback', 'vop' }
+                 'refscanPSRef1', 'RTfeedback', 'vop' ...
+                 ,'prescanbody','prescansurface'}
         f = scan{1};
 
         % remove unused fields
@@ -626,13 +657,15 @@ function [mdh_blob, filePos, isEOF, mdh_syncdata] = loop_mdh_read( fid, version,
     szBlob   = size( mdh_blob, 2 );
     filePos  = zeros(0, 1, class(cPos));  % avoid bug in Matlab 2013b: https://scivision.co/matlab-fseek-bug-with-uint64-offset/
 
-    % H.-L. Lee, setup for PMU data (Not 100% sure if the numbers are correct... please check)
+    % H.-L. Lee, setup for PMU data: SYNCDATA ength
     if strncmp(VerString,'XA3',3) || strncmp(VerString,'XA5',3) 
-        syncdata_length = 1632;
-    elseif strncmp(VerString,'XA6',3)
-        syncdata_length = 960;    
+        syncdata_length = 1632;  
     elseif strncmp(VerString,'XA2',3)
         syncdata_length = 1120;
+    elseif strncmp(VerString,'XA60',4)
+        syncdata_length = 960;
+    elseif strncmp(VerString,'XA61',4)
+        syncdata_length = 1204;%9632;
     else
         syncdata_length = 0;
     end
@@ -785,7 +818,7 @@ end % of loop_mdh_read()
 
 
 
-function [mdh,mask] = evalMDH( mdh_blob, version, isInplacePATref )
+function [mdh,mask] = evalMDH( mdh_blob, version, isInplacePATref, isPrescan )
 % see pkg/MrServers/MrMeasSrv/SeqIF/MDH/mdh.h
 % and pkg/MrServers/MrMeasSrv/SeqIF/MDH/MdhProxy.h
 
@@ -867,13 +900,23 @@ noImaScan = ( mask.MDH_ACQEND           | mask.MDH_RTFEEDBACK   | mask.MDH_HPFEE
 if ~isInplacePATref
     noImaScan = (noImaScan | (mask.MDH_PATREFSCAN & ~mask.MDH_PATREFANDIMASCAN));
 end
+
+if isPrescan
+    mask.MDH_prescanbody              = mdh.ushUsedChannels==2;
+    
+    tempmask=false(Nmeas,1);
+    %sssr: does that mean we only use the 2nd body coil?
+    cind=find(mdh.ushUsedChannels==2);
+    tempmask(cind-1)=true;
+    mask.MDH_prescansurface              = tempmask;
+end
             
 mask.MDH_IMASCAN( noImaScan ) = 0;
 
 end % of evalMDH()
 
 
-% H.-L. Lee, extract PMU data and timestamps and store them in the mdh struct
+% H.-L. Lee, read PMU data and timestamps and store them in the mdh struct
 function PMUdata = evalMDH_syncData( mdh_blob, version ,timestamps)
 
 vec = @(x) x(:);
@@ -905,42 +948,58 @@ data_uint16 = reshape( data_uint16, [], Nmeas );
 mdh.ulDMALength = data_uint32(1,:);      %   1 :   4
 mdh.ulTimeStamp = data_uint32(4,:).';    %  13 :  16
 
-mdh.EKG.data  = [vec(data_uint16(1:2:80,:)) vec(data_uint16(85:2:164,:)) vec(data_uint16(169:2:248,:)) vec(data_uint16(253:2:332,:))];
-mdh.PULS.data = vec(data_uint16(337:2:376,:));
-mdh.RESP.data = vec(data_uint16(381:2:390,:));
-mdh.EXT.data  = [vec(data_uint16(395:2:404,:)) vec(data_uint16(409:2:418,:))];
+if(size(data_uint16,1)>342)
 
-timeStamp40 = interp1(0:40:40*Nmeas-1,double(mdh.ulTimeStamp),1:40*Nmeas,'linear','extrap').';
-timeStamp20 = interp1(0:20:20*Nmeas-1,double(mdh.ulTimeStamp),1:20*Nmeas,'linear','extrap').';
-timeStamp05 = interp1(0:5:5*Nmeas-1,  double(mdh.ulTimeStamp), 1:5*Nmeas,'linear','extrap').';
+    mdh.EKG.data  = [vec(data_uint16(1:2:80,:)) vec(data_uint16(85:2:164,:)) vec(data_uint16(169:2:248,:)) vec(data_uint16(253:2:332,:))];
+    mdh.PULS.data = vec(data_uint16(337:2:376,:));
+    mdh.RESP.data = vec(data_uint16(381:2:390,:));
+    mdh.EXT.data  = [vec(data_uint16(395:2:404,:)) vec(data_uint16(409:2:418,:))];
 
-mdh.EKG.TimeStamp  = timeStamp40;
-mdh.PULS.TimeStamp = timeStamp20;
-mdh.RESP.TimeStamp = timeStamp05;
-mdh.EXT.TimeStamp  = timeStamp05;
-try
-    mdh.EVNT.data = vec(data_uint16(423:2:502,:));
-    mdh.EVNT.TimeStamp = timeStamp40;
-catch
-    mdh.EVNT.data = zeros(40,1);
-    mdh.EVNT.TimeStamp = timeStamp40;
-end
+    timeStamp40 = interp1(0:40:40*Nmeas-1,double(mdh.ulTimeStamp),1:40*Nmeas,'linear','extrap').';
+    timeStamp20 = interp1(0:20:20*Nmeas-1,double(mdh.ulTimeStamp),1:20*Nmeas,'linear','extrap').';
+    timeStamp05 = interp1(0:5:5*Nmeas-1,  double(mdh.ulTimeStamp), 1:5*Nmeas,'linear','extrap').';
 
-PMUdata.raw = mdh;
-try
-	% sync PMU data to ADC timestamps
-    PMUdata.EKG  = interp1(mdh.EKG.TimeStamp, double(mdh.EKG.data), double(timestamps),'linear','extrap').';
-    PMUdata.PULS = interp1(mdh.PULS.TimeStamp,double(mdh.PULS.data),double(timestamps),'linear','extrap');
-    PMUdata.RESP = interp1(mdh.RESP.TimeStamp,double(mdh.RESP.data),double(timestamps),'linear','extrap');
-    PMUdata.EXT  = interp1(mdh.EXT.TimeStamp, double(mdh.EXT.data), double(timestamps),'linear','extrap').';
-    PMUdata.EVNT = interp1(mdh.EVNT.TimeStamp,double(mdh.EVNT.data),double(timestamps),'linear','extrap');
-catch
-    PMUdata.EKG   = zeros(4,numel(timestamps));
-    PMUdata.PULS  = zeros(1,numel(timestamps));
-    PMUdata.RESP  = zeros(1,numel(timestamps));
-    PMUdata.EXT   = zeros(2,numel(timestamps));
-    PMUdata.EVNT  = zeros(1,numel(timestamps));
-    fprintf('PMU data interpolation failed.\n');
-end
+    mdh.EKG.TimeStamp  = timeStamp40;
+    mdh.PULS.TimeStamp = timeStamp20;
+    mdh.RESP.TimeStamp = timeStamp05;
+    mdh.EXT.TimeStamp  = timeStamp05;
+    try
+        mdh.EVNT.data = vec(data_uint16(423:2:502,:));
+        mdh.EVNT.TimeStamp = timeStamp40;
+    catch
+        mdh.EVNT.data = zeros(40,1);
+        mdh.EVNT.TimeStamp = timeStamp40;
+    end
+
+    PMUdata.raw = mdh;
+    try
+        % sync PMU data to ADC timestamps
+        PMUdata.EKG  = interp1(mdh.EKG.TimeStamp, double(mdh.EKG.data), double(timestamps),'linear','extrap').';
+        PMUdata.PULS = interp1(mdh.PULS.TimeStamp,double(mdh.PULS.data),double(timestamps),'linear','extrap');
+        PMUdata.RESP = interp1(mdh.RESP.TimeStamp,double(mdh.RESP.data),double(timestamps),'linear','extrap');
+        PMUdata.EXT  = interp1(mdh.EXT.TimeStamp, double(mdh.EXT.data), double(timestamps),'linear','extrap').';
+        PMUdata.EVNT = interp1(mdh.EVNT.TimeStamp,double(mdh.EVNT.data),double(timestamps),'linear','extrap');
+    catch
+        PMUdata.EKG   = zeros(4,numel(timestamps));
+        PMUdata.PULS  = zeros(1,numel(timestamps));
+        PMUdata.RESP  = zeros(1,numel(timestamps));
+        PMUdata.EXT   = zeros(2,numel(timestamps));
+        PMUdata.EVNT  = zeros(1,numel(timestamps));
+        fprintf('PMU data interpolation failed.\n');
+    end
     
+     
+else
+    mdh.EKG.data  = [vec(data_uint16(1:2:80,:)) vec(data_uint16(85:2:164,:)) vec(data_uint16(169:2:248,:)) vec(data_uint16(253:2:332,:))];
+    mdh.EXT.data = vec(data_uint16(335:342,:));
+
+    timeStamp40 = interp1(0:40:40*Nmeas-1,double(mdh.ulTimeStamp),1:40*Nmeas,'linear','extrap').';
+    timeStamp08 = interp1(0:8:8*Nmeas-1,  double(mdh.ulTimeStamp), 1:8*Nmeas,'linear','extrap').';
+
+    mdh.EKG.TimeStamp  = timeStamp40;
+    mdh.EXT.TimeStamp = timeStamp08;
+
+    PMUdata.EKG  = interp1(mdh.EKG.TimeStamp, double(mdh.EKG.data), double(timestamps),'linear','extrap').';
+    PMUdata.EXT  = interp1(mdh.EXT.TimeStamp, double(mdh.EXT.data), double(timestamps),'linear','extrap').';
+end
 end % of evalMDH_syncData()
