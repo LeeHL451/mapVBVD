@@ -626,9 +626,11 @@ function [mdh_blob, filePos, isEOF, mdh_syncdata] = loop_mdh_read( fid, version,
     szBlob   = size( mdh_blob, 2 );
     filePos  = zeros(0, 1, class(cPos));  % avoid bug in Matlab 2013b: https://scivision.co/matlab-fseek-bug-with-uint64-offset/
 
-    % H.-L. Lee, setup for PMU data
-    if strncmp(VerString,'XA3',3) || strncmp(VerString,'XA5',3) || strncmp(VerString,'XA6',3)
+    % H.-L. Lee, setup for PMU data (Not 100% sure if the numbers are correct... please check)
+    if strncmp(VerString,'XA3',3) || strncmp(VerString,'XA5',3) 
         syncdata_length = 1632;
+    elseif strncmp(VerString,'XA6',3)
+        syncdata_length = 960;    
     elseif strncmp(VerString,'XA2',3)
         syncdata_length = 1120;
     else
