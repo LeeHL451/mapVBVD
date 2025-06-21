@@ -660,7 +660,7 @@ function [mdh_blob, filePos, isEOF, mdh_syncdata] = loop_mdh_read( fid, version,
     % H.-L. Lee, setup for PMU data: SYNCDATA ength
     if strncmp(VerString,'XA31',4) || strncmp(VerString,'XA51',4) 
         syncdata_length = 1632;  
-    elseif strncmp(VerString,'XA20',3) || strncmp(VerString,'XA30',4) 
+    elseif strncmp(VerString,'XA20',4) || strncmp(VerString,'XA30',4) 
         syncdata_length = 1120;
     elseif strncmp(VerString,'XA60',4)
         syncdata_length = 960;
