@@ -657,19 +657,23 @@ function [mdh_blob, filePos, isEOF, mdh_syncdata] = loop_mdh_read( fid, version,
     szBlob   = size( mdh_blob, 2 );
     filePos  = zeros(0, 1, class(cPos));  % avoid bug in Matlab 2013b: https://scivision.co/matlab-fseek-bug-with-uint64-offset/
 
-    % H.-L. Lee, setup for PMU data: SYNCDATA ength
-    if strncmp(VerString,'XA31',4) || strncmp(VerString,'XA51',4) 
-        syncdata_length = 1632;  
-    elseif strncmp(VerString,'XA20',4) || strncmp(VerString,'XA30',4) 
-        syncdata_length = 1120;
-    elseif strncmp(VerString,'XA60',4)
-        syncdata_length = 960;
-    elseif strncmp(VerString,'XA61',4)
-        syncdata_length = 1204;
-    else
-        syncdata_length = 0;
-    end
-    mdh_syncdata = zeros(syncdata_length,0,'uint8');
+    % ---------------------------------------------------------------------
+    % H.-L. Lee, setup for PMU data: initialize SYNCDATA length
+%     if strncmp(VerString,'XA20',4) || strncmp(VerString,'XA30',4)
+%         syncdata_length = 1120;
+%     elseif strncmp(VerString,'XA31',4) || strncmp(VerString,'XA50',4) || strncmp(VerString,'XA51',4)
+%         syncdata_length = 1632;
+%     elseif strncmp(VerString,'XA60',4)
+%         syncdata_length = 960;
+%     elseif strncmp(VerString,'XA61',4)
+%         syncdata_length = 1204;
+%     else
+%         syncdata_length = 0;
+%     end
+
+    syncdata_length = 0;
+    mdh_syncdata = zeros(1120,1,'uint8');
+    % ---------------------------------------------------------------------
     
     fseek(fid,cPos,'bof');
 
@@ -762,8 +766,14 @@ function [mdh_blob, filePos, isEOF, mdh_syncdata] = loop_mdh_read( fid, version,
                 ulDMALength = byteMDH;
             end
             cPos = cPos + SYNCDATALength;
+
+            % The very first SYNCDATA in each twixobj is not physiological recording; 
+            % discard when a different SYNCDATA length is detected for the next mdh 
             if SYNCDATALength == syncdata_length
                 mdh_syncdata(:,end+1) = [data_u8;data_u8_tail];
+            elseif size(mdh_syncdata,2) == 1
+                syncdata_length = SYNCDATALength;
+                mdh_syncdata = [data_u8;data_u8_tail];
             end
             continue
         end
