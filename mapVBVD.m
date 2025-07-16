@@ -48,6 +48,8 @@ function twix_obj = mapVBVD(filename,varargin)
 %  Chris Mirkes & PE       offcenter shifts in readout direction
 %  H.-L. Lee     06.04.23, extract PMU data to twix_obj.PMUdata for XA2* & XA3* & XA5* systems.
 %                          store both raw and interpolated waveforms.
+%  H.-L. Lee     06.23.25, make syncdata extraction compatible with all NXVA software versions by
+%                          automatically detecting syncdata length.
 % 
 % Input:
 % 
