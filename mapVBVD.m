@@ -405,7 +405,7 @@ for s=1:NScans
     twix_obj{s}.refscanPSRef1 = twix_map_obj(arg,'refscan_phasestab_ref1',filename,version,rstraj);
     twix_obj{s}.RTfeedback    = twix_map_obj(arg,'rtfeedback',filename,version,rstraj);
     twix_obj{s}.vop           = twix_map_obj(arg,'vop',filename,version); % tx-array rf pulses
-    twix_obj{s}.prescanbody = twix_map_obj(arg,'prescanbody',filename,version,rstraj); %add prescan with body coil
+    twix_obj{s}.prescanbody   = twix_map_obj(arg,'prescanbody',filename,version,rstraj); %add prescan with body coil
     twix_obj{s}.prescansurface = twix_map_obj(arg,'prescansurface',filename,version,rstraj); %add prescan with surface coil
     
     % print reader version information
@@ -578,7 +578,7 @@ for s=1:NScans
         PMUdata = evalMDH_syncData( mdh_syncdata, version, twix_obj{s}.image.timestamp);
         twix_obj{s}.PMUdata = PMUdata;
     catch
-        fprintf('extract PMU data failed.\n');
+        fprintf('Extract PMU data failed.\n');
     end
     clear PMUdata mdh_syncdata
 
@@ -959,12 +959,15 @@ mdh.ulDMALength = data_uint32(1,:);      %   1 :   4
 mdh.ulTimeStamp = data_uint32(4,:).';    %  13 :  16
 
 if(size(data_uint16,1)>342)
-
     mdh.EKG.data  = [vec(data_uint16(1:2:80,:)) vec(data_uint16(85:2:164,:)) vec(data_uint16(169:2:248,:)) vec(data_uint16(253:2:332,:))];
     mdh.PULS.data = vec(data_uint16(337:2:376,:));
     mdh.RESP.data = vec(data_uint16(381:2:390,:));
     mdh.EXT.data  = [vec(data_uint16(395:2:404,:)) vec(data_uint16(409:2:418,:))];
 
+    temp = diff(mdh.ulTimeStamp);
+    if (temp(1)~=temp(2))
+        mdh.ulTimeStamp(1) = mdh.ulTimeStamp(2) - temp(2);
+    end
     timeStamp40 = interp1(0:40:40*Nmeas-1,double(mdh.ulTimeStamp),1:40*Nmeas,'linear','extrap').';
     timeStamp20 = interp1(0:20:20*Nmeas-1,double(mdh.ulTimeStamp),1:20*Nmeas,'linear','extrap').';
     timeStamp05 = interp1(0:5:5*Nmeas-1,  double(mdh.ulTimeStamp), 1:5*Nmeas,'linear','extrap').';
@@ -983,22 +986,40 @@ if(size(data_uint16,1)>342)
 
     PMUdata.raw = mdh;
     try
-        % sync PMU data to ADC timestamps
         PMUdata.EKG  = interp1(mdh.EKG.TimeStamp, double(mdh.EKG.data), double(timestamps),'linear','extrap').';
-        PMUdata.PULS = interp1(mdh.PULS.TimeStamp,double(mdh.PULS.data),double(timestamps),'linear','extrap');
-        PMUdata.RESP = interp1(mdh.RESP.TimeStamp,double(mdh.RESP.data),double(timestamps),'linear','extrap');
-        PMUdata.EXT  = interp1(mdh.EXT.TimeStamp, double(mdh.EXT.data), double(timestamps),'linear','extrap').';
-        PMUdata.EVNT = interp1(mdh.EVNT.TimeStamp,double(mdh.EVNT.data),double(timestamps),'linear','extrap');
-    catch
-        PMUdata.EKG   = zeros(4,numel(timestamps));
-        PMUdata.PULS  = zeros(1,numel(timestamps));
-        PMUdata.RESP  = zeros(1,numel(timestamps));
-        PMUdata.EXT   = zeros(2,numel(timestamps));
-        PMUdata.EVNT  = zeros(1,numel(timestamps));
-        fprintf('PMU data interpolation failed.\n');
+    catch errormsg
+        PMUdata.EKG  = zeros(4,numel(timestamps));
+        fprintf('EKG data interpolation failed.\n');
+        fprintf('%s\n', errormsg.message);
     end
-    
-     
+    try
+        PMUdata.PULS = interp1(mdh.PULS.TimeStamp,double(mdh.PULS.data),double(timestamps),'linear','extrap');
+    catch errormsg
+        PMUdata.PULS = zeros(1,numel(timestamps));
+        fprintf('PULS data interpolation failed.\n');
+        fprintf('%s\n', errormsg.message);
+    end
+    try
+        PMUdata.RESP = interp1(mdh.RESP.TimeStamp,double(mdh.RESP.data),double(timestamps),'linear','extrap');
+    catch errormsg
+        PMUdata.RESP = zeros(1,numel(timestamps));
+        fprintf('RESP data interpolation failed.\n');
+        fprintf('%s\n', errormsg.message);
+    end
+    try
+        PMUdata.EXT  = interp1(mdh.EXT.TimeStamp, double(mdh.EXT.data), double(timestamps),'linear','extrap').';
+    catch errormsg
+        PMUdata.EXT  = zeros(2,numel(timestamps));
+        fprintf('EXT data interpolation failed.\n');
+        fprintf('%s\n', errormsg.message);
+    end
+    try
+        PMUdata.EVNT = interp1(mdh.EVNT.TimeStamp,double(mdh.EVNT.data),double(timestamps),'linear','extrap');
+    catch errormsg
+        PMUdata.EVNT = zeros(1,numel(timestamps));
+        fprintf('EVNT data interpolation failed.\n');
+        fprintf('%s\n', errormsg.message);
+    end 
 else
     mdh.EKG.data  = [vec(data_uint16(1:2:80,:)) vec(data_uint16(85:2:164,:)) vec(data_uint16(169:2:248,:)) vec(data_uint16(253:2:332,:))];
     mdh.EXT.data = vec(data_uint16(335:342,:));
@@ -1012,4 +1033,5 @@ else
     PMUdata.EKG  = interp1(mdh.EKG.TimeStamp, double(mdh.EKG.data), double(timestamps),'linear','extrap').';
     PMUdata.EXT  = interp1(mdh.EXT.TimeStamp, double(mdh.EXT.data), double(timestamps),'linear','extrap').';
 end
+
 end % of evalMDH_syncData()
