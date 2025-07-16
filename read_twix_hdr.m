@@ -5,13 +5,18 @@ function [prot,rstraj] = read_twix_hdr(fid)
 %
 % Author: Philipp Ehses MPI Tuebingen, Mar/11/2014
 % email: philipp.ehses@dzne.de
-      
+
+    isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+    
     nbuffers = fread(fid, 1,'uint32');
     
     prot = [];
     for b=1:nbuffers
         %now read string up to null termination     
         bufname = fread(fid, 10, 'uint8=>char').';
+        if isOctave
+            bufname(~isascii (bufname)) = [];   % (ND) removes non-ascii characters to fix errors in Octave
+        end
         bufname = regexp(bufname, '^\w*', 'match');
         bufname = bufname{1};
         fseek(fid, numel(bufname)-9, 'cof');        
@@ -97,6 +102,7 @@ function xprot = parse_xprot(buffer)
         
         % H.-L. Lee 05/06/2022
         % Special handling for tFree
+        % (We use tFree to store custom header info in a json string for our own sequences, hence this modification)
         if strcmp(name,'tFree')
             value = char(strtrim(regexprep(tokens{m}(end), '("{)', '{')));    % remove " at the beginning
             value = char(strtrim(regexprep(value, '( *<\w*> *[^\n]*)', ''))); % remove tag
@@ -153,7 +159,8 @@ function mrprot = parse_ascconv(buffer)
         breaked = false;
         for k=1:numel(v)
             if isOctave
-                vk = v{k};
+                %vk = v{k};  % (ND) Octave error: struct cannot be indexed with {
+                vk = v(k);
                 if iscell(vk.name)
                     % lazy fix that throws some info away
                     vk.name = vk.name{1};
