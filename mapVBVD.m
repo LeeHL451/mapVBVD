@@ -979,7 +979,7 @@ mdh.ulDMALength = data_uint32(1,:);      %   1 :   4
 mdh.ulTimeStamp = data_uint32(4,:).';    %  13 :  16
 
 timeStart = find(mdh.ulTimeStamp<timestamps(1),1,'last');
-timeStamp40 = interp1(40*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),40*timeStart:40*Nmeas,'linear','extrap').';
+timeStamp40 = interp1(40*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),20+(40*timeStart:40*Nmeas),'linear','extrap').';
 timeStamp20 = interp1(20*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),20*timeStart:20*Nmeas,'linear','extrap').';
 timeStamp05 = interp1( 5*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)), 5*timeStart: 5*Nmeas,'linear','extrap').';
 
@@ -1005,9 +1005,8 @@ if (strncmp(VerString,'XA61',4))
         elseif channel == 5
             mdh.PULS.data = typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single');
             mdh.PULS.data = mdh.PULS.data(end-length(timeStamp20)+1:end,:);
-        elseif channel == 1032
-            mdh.RESP.data = typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single');
-            mdh.RESP.data = mdh.RESP.data(end-length(timeStamp05)+1:end,:);
+        elseif channel == 1032 || channel == 1030 || channel == 1031
+            mdh.RESP.data = [mdh.RESP.data; typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single')];
         elseif channel == 9 || channel == 10
             mdh.EXT.data  = [mdh.EXT.data; typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single')];
         elseif channel == 35
@@ -1023,10 +1022,16 @@ if (strncmp(VerString,'XA61',4))
         idx = idx + data_uint16(idx+3)/2;
     end
     mdh.EKG.data  = reshape(mdh.EKG.data,40*Nmeas,[]);
+    mdh.EKG.data  = mdh.EKG.data(end-length(timeStamp40)+1:end,:);
     mdh.EXT.data  = reshape(mdh.EXT.data, 5*Nmeas,[]);
-    
-    mdh.EKG.data = mdh.EKG.data(end-length(timeStamp40)+1:end,:);
-    mdh.EXT.data = mdh.EXT.data(end-length(timeStamp05)+1:end,:);
+    mdh.EXT.data  = mdh.EXT.data(end-length(timeStamp05)+1:end,:);
+    mdh.RESP.data = reshape(mdh.RESP.data,5*Nmeas,[]);
+    mdh.RESP.data = mdh.RESP.data(end-length(timeStamp05)+1:end,:);
+    for n = size(mdh.RESP.data,2):-1:1
+        if sum(mdh.RESP.data(:,n)) == 0 && size(mdh.RESP.data,2) > 1
+            mdh.RESP.data(:,n) = [];
+        end
+    end
 elseif(strncmp(VerString,'XA',2))
     idx = 62;
     while (idx < size(data_uint32,1))
@@ -1133,4 +1138,5 @@ catch errormsg
 end 
 
 end % of evalMDH_syncData()
+
 
