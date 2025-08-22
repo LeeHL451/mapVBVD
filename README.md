@@ -1,6 +1,6 @@
 # mapVBVD with physiological data extraction
 
-Reads Siemens raw .dat file from NXVA MRI raw data.
+Reads Siemens raw .dat file from NXVA MRI raw data. Tested with XA31A, XA50, XA51 and XA61A data.
 
 This modified version reads physiological data embedded in the .dat file, and interpolates them to sync with ADC time points. Both raw signal and interpolated ones will be stored as a struct in `twixobj.PMUdata`.
 
