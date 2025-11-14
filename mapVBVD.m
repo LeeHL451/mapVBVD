@@ -978,16 +978,20 @@ end
 mdh.ulDMALength = data_uint32(1,:);      %   1 :   4
 mdh.ulTimeStamp = data_uint32(4,:).';    %  13 :  16
 
-timeStart = find(mdh.ulTimeStamp<timestamps(1),1,'last');
+% Crop signals before the 1st ADC and generate time stamps for all samples
+% There seems to be a 1 line shift between ulTimeStamp and 
+timeStart   = find(mdh.ulTimeStamp<timestamps(1),1,'last');
 timeStamp40 = interp1(40*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),20+(40*timeStart:40*Nmeas),'linear','extrap').';
 timeStamp20 = interp1(20*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),20*timeStart:20*Nmeas,'linear','extrap').';
 timeStamp05 = interp1( 5*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)), 5*timeStart: 5*Nmeas,'linear','extrap').';
 
-mdh.EKG.TimeStamp  = timeStamp40;
-mdh.PULS.TimeStamp = timeStamp20;
-mdh.RESP.TimeStamp = timeStamp05;
+mdh.EKG.TimeStamp  = timeStamp40;   % 40Hz sampling rate
+mdh.PULS.TimeStamp = timeStamp20;   % 20Hz sampling rate
+mdh.RESP.TimeStamp = timeStamp05;   %  5Hz sampling rate
 mdh.EXT.TimeStamp  = timeStamp05;
 mdh.EVNT.TimeStamp = timeStamp40;
+mdh.CardPT.TimeStamp = timeStamp40;
+mdh.RespPT.TimeStamp = timeStamp40;
 
 mdh.EKG.data  = [];
 mdh.PULS.data = [];
@@ -997,29 +1001,48 @@ mdh.CardPT.data = [];
 mdh.RespPT.data = [];
 
 if (strncmp(VerString,'XA61',4))
+    % each segment begins with 16 bytes basic signal header + 24 bytes extended header
+    % idx+1 - channel
+    % idx+2 - physio signal size of one sample in bytes
+    % idx+3 - segment length in bytes
+    % idx+4 - physio signal number of samples
     idx = 0;
     while (idx < size(data_uint16,1))
-        channel = data_uint16(idx+1);
+        channel = typecast(data_uint16(idx+1,1),'uint8'); channel = channel(1);
         if channel == 1 || channel == 2 || channel == 3 || channel == 4
-            mdh.EKG.data  = [mdh.EKG.data; typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single')];
+            divisor = typecast(data_uint16(idx+(13:16),1),'double');
+            offset  = typecast(data_uint16(idx+(17:20),1),'double');
+            mdh.EKG.data  = [mdh.EKG.data; (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
         elseif channel == 5
-            mdh.PULS.data = typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single');
+            divisor = typecast(data_uint16(idx+(13:16),1),'double');
+            offset  = typecast(data_uint16(idx+(17:20),1),'double');
+            mdh.PULS.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor;
             mdh.PULS.data = mdh.PULS.data(end-length(timeStamp20)+1:end,:);
-        elseif channel == 1032 || channel == 1030 || channel == 1031
-            mdh.RESP.data = [mdh.RESP.data; typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single')];
+        elseif channel == 8 || channel == 6 || channel == 7
+            divisor = typecast(data_uint16(idx+(13:16),1),'double');
+            offset  = typecast(data_uint16(idx+(17:20),1),'double');
+            mdh.RESP.data = [mdh.RESP.data; (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
         elseif channel == 9 || channel == 10
-            mdh.EXT.data  = [mdh.EXT.data; typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single')];
+            divisor = typecast(data_uint16(idx+(13:16),1),'double');
+            offset  = typecast(data_uint16(idx+(17:20),1),'double');
+            mdh.EXT.data  = [mdh.EXT.data; (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
         elseif channel == 35
-            mdh.CardPT.data = typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single');
+            divisor = typecast(data_uint16(idx+(13:16),1),'double');
+            offset  = typecast(data_uint16(idx+(17:20),1),'double');
+            mdh.CardPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor;
             mdh.CardPT.data = mdh.CardPT.data(end-length(timeStamp40)+1:end,:);
         elseif channel == 36
-            mdh.RespPT.data = typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single');
-            mdh.RespPT.data = mdh.RespPT.data(end-length(timeStamp20)+1:end,:);
+            divisor = typecast(data_uint16(idx+(13:16),1),'double');
+            offset  = typecast(data_uint16(idx+(17:20),1),'double');
+            mdh.RespPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor;
+            mdh.RespPT.data = mdh.RespPT.data(end-length(timeStamp40)+1:end,:);
         elseif channel == 49
-            mdh.EVNT.data = typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*2),:)),'single');
+            divisor = typecast(data_uint16(idx+(13:16),1),'double');
+            offset  = typecast(data_uint16(idx+(17:20),1),'double');
+            mdh.EVNT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor;
             mdh.EVNT.data = mdh.EVNT.data(end-length(timeStamp40)+1:end,:);
         end
-        idx = idx + data_uint16(idx+3)/2;
+        idx = double(idx + data_uint16(idx+3)/2);
     end
     mdh.EKG.data  = reshape(mdh.EKG.data,40*Nmeas,[]);
     mdh.EKG.data  = mdh.EKG.data(end-length(timeStamp40)+1:end,:);
@@ -1027,7 +1050,11 @@ if (strncmp(VerString,'XA61',4))
     mdh.EXT.data  = mdh.EXT.data(end-length(timeStamp05)+1:end,:);
     mdh.RESP.data = reshape(mdh.RESP.data,5*Nmeas,[]);
     mdh.RESP.data = mdh.RESP.data(end-length(timeStamp05)+1:end,:);
+    mdh.RESP.data = mdh.RESP.data - mean(mdh.RESP.data);
     for n = size(mdh.RESP.data,2):-1:1
+        if norm(mdh.RESP.data(:,n)) > 0
+            mdh.RESP.data(:,n) = mdh.RESP.data(:,n)*sqrt(size(mdh.RESP.data,1))/norm(mdh.RESP.data(:,n));
+        end
         if sum(mdh.RESP.data(:,n)) == 0 && size(mdh.RESP.data,2) > 1
             mdh.RESP.data(:,n) = [];
         end
@@ -1051,7 +1078,7 @@ elseif(strncmp(VerString,'XA',2))
             mdh.CardPT.data = mdh.CardPT.data(end-length(timeStamp40)+1:end,:);
         elseif channel == 10
             mdh.RespPT.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:));
-            mdh.RespPT.data = mdh.RespPT.data(end-length(timeStamp20)+1:end,:);
+            mdh.RespPT.data = mdh.RespPT.data(end-length(timeStamp40)+1:end,:);
         elseif channel == 8
             mdh.EVNT.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:));
             mdh.EVNT.data = mdh.EVNT.data(end-length(timeStamp40)+1:end,:);
@@ -1060,7 +1087,6 @@ elseif(strncmp(VerString,'XA',2))
     end
     mdh.EKG.data  = reshape(mdh.EKG.data,40*Nmeas,[]);
     mdh.EXT.data  = reshape(mdh.EXT.data, 5*Nmeas,[]);
-    
     mdh.EKG.data = mdh.EKG.data(end-length(timeStamp40)+1:end,:);
     mdh.EXT.data = mdh.EXT.data(end-length(timeStamp05)+1:end,:);
 elseif(size(data_uint16,1)>342)
@@ -1082,8 +1108,10 @@ elseif(size(data_uint16,1)>342)
     mdh.PULS.data   = mdh.PULS.data(end-length(timeStamp20)+1:end,:);
     mdh.RESP.data   = mdh.RESP.data(end-length(timeStamp05)+1:end,:);
     mdh.EXT.data    = mdh.EXT.data(end-length(timeStamp05)+1:end,:);
+    mdh.CardPT.data = zeros(size(mdh.EKG.data,1),1);
+    mdh.RespPT.data = zeros(size(mdh.RESP.data));
 else
-    mdh.EKG.data  = [vec(data_uint16(1:2:80,:)) vec(data_uint16(85:2:164,:)) vec(data_uint16(169:2:248,:)) vec(data_uint16(253:2:332,:))];
+    mdh.EKG.data = [vec(data_uint16(1:2:80,:)) vec(data_uint16(85:2:164,:)) vec(data_uint16(169:2:248,:)) vec(data_uint16(253:2:332,:))];
     mdh.EXT.data = vec(data_uint16(335:342,:));
     
     timeStamp08 = interp1(8*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)), timeStart:8*Nmeas,'linear','extrap').';
@@ -1091,6 +1119,8 @@ else
     
     mdh.EKG.data    = mdh.EKG.data(end-length(timeStamp40)+1:end,:);
     mdh.EXT.data    = mdh.EXT.data(end-length(timeStamp05)+1:end,:);
+    mdh.CardPT.data = zeros(size(mdh.EKG.data,1),1);
+    mdh.RespPT.data = zeros(size(mdh.RESP.data));
 end
 
 temp = diff(mdh.ulTimeStamp);
@@ -1136,7 +1166,21 @@ catch errormsg
     fprintf('EVNT data interpolation failed.\n');
     fprintf('%s\n', errormsg.message);
 end 
-
+try
+    PMUdata.CardPT  = interp1(mdh.CardPT.TimeStamp, double(mdh.CardPT.data), double(timestamps),'linear','extrap').';
+catch errormsg
+    PMUdata.CardPT  = zeros(1,numel(timestamps));
+    fprintf('CardPT data interpolation failed.\n');
+    fprintf('%s\n', errormsg.message);
+end
+try
+    PMUdata.RespPT  = interp1(mdh.RespPT.TimeStamp, double(mdh.RespPT.data), double(timestamps),'linear','extrap').';
+catch errormsg
+    PMUdata.RespPT  = zeros(1,numel(timestamps));
+    fprintf('RespPT data interpolation failed.\n');
+    fprintf('%s\n', errormsg.message);
+end
 end % of evalMDH_syncData()
+
 
 
