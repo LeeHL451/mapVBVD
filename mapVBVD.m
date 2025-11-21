@@ -1012,7 +1012,7 @@ if (strncmp(VerString,'XA61',4))
         if channel == 1 || channel == 2 || channel == 3 || channel == 4
             divisor = typecast(data_uint16(idx+(13:16),1),'double');
             offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.EKG.data  = [mdh.EKG.data; (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
+            mdh.EKG.data  = [mdh.EKG.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
         elseif channel == 5
             divisor = typecast(data_uint16(idx+(13:16),1),'double');
             offset  = typecast(data_uint16(idx+(17:20),1),'double');
@@ -1021,11 +1021,11 @@ if (strncmp(VerString,'XA61',4))
         elseif channel == 8 || channel == 6 || channel == 7
             divisor = typecast(data_uint16(idx+(13:16),1),'double');
             offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.RESP.data = [mdh.RESP.data; (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
+            mdh.RESP.data = [mdh.RESP.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
         elseif channel == 9 || channel == 10
             divisor = typecast(data_uint16(idx+(13:16),1),'double');
             offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.EXT.data  = [mdh.EXT.data; (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
+            mdh.EXT.data  = [mdh.EXT.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
         elseif channel == 35
             divisor = typecast(data_uint16(idx+(13:16),1),'double');
             offset  = typecast(data_uint16(idx+(17:20),1),'double');
@@ -1046,8 +1046,8 @@ if (strncmp(VerString,'XA61',4))
     end
     mdh.EKG.data  = reshape(mdh.EKG.data,40*Nmeas,[]);
     mdh.EKG.data  = mdh.EKG.data(end-length(timeStamp40)+1:end,:);
-    mdh.EXT.data  = reshape(mdh.EXT.data, 5*Nmeas,[]);
-    mdh.EXT.data  = mdh.EXT.data(end-length(timeStamp05)+1:end,:);
+    mdh.EXT.data  = reshape(mdh.EXT.data, 40*Nmeas,[]);
+    mdh.EXT.data  = mdh.EXT.data(end-length(timeStamp40)+1:end,:);
     mdh.RESP.data = reshape(mdh.RESP.data,5*Nmeas,[]);
     mdh.RESP.data = mdh.RESP.data(end-length(timeStamp05)+1:end,:);
     mdh.RESP.data = mdh.RESP.data - mean(mdh.RESP.data);
@@ -1146,7 +1146,7 @@ catch errormsg
     fprintf('%s\n', errormsg.message);
 end
 try
-    PMUdata.RESP = interp1(mdh.RESP.TimeStamp,double(mdh.RESP.data),double(timestamps),'linear','extrap');
+    PMUdata.RESP = interp1(mdh.RESP.TimeStamp,double(mdh.RESP.data),double(timestamps),'linear','extrap').';
 catch errormsg
     PMUdata.RESP = zeros(1,numel(timestamps));
     fprintf('RESP data interpolation failed.\n');
@@ -1167,7 +1167,7 @@ catch errormsg
     fprintf('%s\n', errormsg.message);
 end 
 try
-    PMUdata.CardPT  = interp1(mdh.CardPT.TimeStamp, double(mdh.CardPT.data), double(timestamps),'linear','extrap').';
+    PMUdata.CardPT  = interp1(mdh.CardPT.TimeStamp, double(mdh.CardPT.data), double(timestamps),'linear','extrap');
 catch errormsg
     PMUdata.CardPT  = zeros(1,numel(timestamps));
     fprintf('CardPT data interpolation failed.\n');
@@ -1180,7 +1180,9 @@ catch errormsg
     fprintf('RespPT data interpolation failed.\n');
     fprintf('%s\n', errormsg.message);
 end
+
 end % of evalMDH_syncData()
+
 
 
 
