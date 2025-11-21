@@ -1010,46 +1010,22 @@ if (strncmp(VerString,'XA61',4))
     while (idx < size(data_uint16,1))
         channel = typecast(data_uint16(idx+1,1),'uint8'); channel = channel(1);
         if channel == 1 || channel == 2 || channel == 3 || channel == 4
-            divisor = typecast(data_uint16(idx+(13:16),1),'double');
-            offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.EKG.data  = [mdh.EKG.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
+            mdh.EKG.data  = [mdh.EKG.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
         elseif channel == 5
-            divisor = typecast(data_uint16(idx+(13:16),1),'double');
-            offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.PULS.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor;
-            mdh.PULS.data = mdh.PULS.data(end-length(timeStamp20)+1:end,:);
+            mdh.PULS.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'));
         elseif channel == 8 || channel == 6 || channel == 7
-            divisor = typecast(data_uint16(idx+(13:16),1),'double');
-            offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.RESP.data = [mdh.RESP.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
+            mdh.RESP.data = [mdh.RESP.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
         elseif channel == 9 || channel == 10
-            divisor = typecast(data_uint16(idx+(13:16),1),'double');
-            offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.EXT.data  = [mdh.EXT.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor];
+            mdh.EXT.data  = [mdh.EXT.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
         elseif channel == 35
-            divisor = typecast(data_uint16(idx+(13:16),1),'double');
-            offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.CardPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor;
-            mdh.CardPT.data = mdh.CardPT.data(end-length(timeStamp40)+1:end,:);
+            mdh.CardPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'));
         elseif channel == 36
-            divisor = typecast(data_uint16(idx+(13:16),1),'double');
-            offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.RespPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor;
-            mdh.RespPT.data = mdh.RespPT.data(end-length(timeStamp40)+1:end,:);
+            mdh.RespPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'));
         elseif channel == 49
-            divisor = typecast(data_uint16(idx+(13:16),1),'double');
-            offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.EVNT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single')-offset)/divisor;
-            mdh.EVNT.data = mdh.EVNT.data(end-length(timeStamp40)+1:end,:);
+            mdh.EVNT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single'));
         end
         idx = double(idx + data_uint16(idx+3)/2);
     end
-    mdh.EKG.data  = reshape(mdh.EKG.data,40*Nmeas,[]);
-    mdh.EKG.data  = mdh.EKG.data(end-length(timeStamp40)+1:end,:);
-    mdh.EXT.data  = reshape(mdh.EXT.data, 40*Nmeas,[]);
-    mdh.EXT.data  = mdh.EXT.data(end-length(timeStamp40)+1:end,:);
-    mdh.RESP.data = reshape(mdh.RESP.data,5*Nmeas,[]);
-    mdh.RESP.data = mdh.RESP.data(end-length(timeStamp05)+1:end,:);
     mdh.RESP.data = mdh.RESP.data - mean(mdh.RESP.data);
     for n = size(mdh.RESP.data,2):-1:1
         if norm(mdh.RESP.data(:,n)) > 0
@@ -1182,6 +1158,7 @@ catch errormsg
 end
 
 end % of evalMDH_syncData()
+
 
 
 
