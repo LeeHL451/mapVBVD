@@ -967,27 +967,27 @@ mdh_blob(4,:) = bitget( mdh_blob(4,:),1);  % ubit24: keep only 1 bit from the 4t
 
 if (strncmp(VerString,'XA61',4))
     data_uint32 = reshape(typecast( reshape(mdh_blob(1:16,:), [],1), 'uint32' ),[],Nmeas);
-    data_uint16 = reshape(typecast( reshape(mdh_blob(273:end,:),[],1), 'uint16' ),[],Nmeas);
+    data_uint16 = reshape(typecast( reshape(mdh_blob(273:end-4,:),[],1), 'uint16' ),[],Nmeas);
 elseif(strncmp(VerString,'XA',2))
     data_uint32 = reshape(typecast( reshape(mdh_blob, [],1), 'uint32' ),[],Nmeas);
 else
     data_uint32 = reshape(typecast( reshape(mdh_blob(1:76,:),   [],1), 'uint32' ),[],Nmeas);
-    data_uint16 = reshape(typecast( reshape(mdh_blob(257:end,:),[],1), 'uint16' ),[],Nmeas);
+    data_uint16 = reshape(typecast( reshape(mdh_blob(257:end-4,:),[],1), 'uint16' ),[],Nmeas);
 end
 
-mdh.ulDMALength = data_uint32(1,:);      %   1 :   4
+mdh.ulDMALength = data_uint32(1,:).';      %   1 :   4
 mdh.ulTimeStamp = data_uint32(4,:).';    %  13 :  16
 
 % Crop signals before the 1st ADC and generate time stamps for all samples
 % There seems to be a 1 line shift between ulTimeStamp and 
 timeStart   = find(mdh.ulTimeStamp<timestamps(1),1,'last');
-timeStamp40 = interp1(40*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),20+(40*timeStart:40*Nmeas),'linear','extrap').';
-timeStamp20 = interp1(20*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),20*timeStart:20*Nmeas,'linear','extrap').';
-timeStamp05 = interp1( 5*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)), 5*timeStart: 5*Nmeas,'linear','extrap').';
+timeStamp40 = interp1(40*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),20+(40*(timeStart-1):40*Nmeas-1),'linear','extrap').';
+timeStamp20 = interp1(20*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)),20*(timeStart-1):20*Nmeas-1,'linear','extrap').';
+timeStamp05 = interp1( 5*((timeStart-1):1:(Nmeas-1)),double(mdh.ulTimeStamp(timeStart:end)), 5*(timeStart-1): 5*Nmeas-1,'linear','extrap').';
 
-mdh.EKG.TimeStamp  = timeStamp40;   % 40Hz sampling rate
-mdh.PULS.TimeStamp = timeStamp20;   % 20Hz sampling rate
-mdh.RESP.TimeStamp = timeStamp05;   %  5Hz sampling rate
+mdh.EKG.TimeStamp  = timeStamp40;   % 400Hz sampling rate
+mdh.PULS.TimeStamp = timeStamp20;   % 200Hz sampling rate
+mdh.RESP.TimeStamp = timeStamp05;   %  50Hz sampling rate
 mdh.EXT.TimeStamp  = timeStamp05;
 mdh.EVNT.TimeStamp = timeStamp40;
 mdh.CardPT.TimeStamp = timeStamp40;
@@ -1010,12 +1010,15 @@ if (strncmp(VerString,'XA61',4))
     while (idx < size(data_uint16,1))
         channel = typecast(data_uint16(idx+1,1),'uint8'); channel = channel(1);
         if channel == 1 || channel == 2 || channel == 3 || channel == 4
+%             divisor = typecast(data_uint16(idx+(13:16),1),'double');
+%             offset  = typecast(data_uint16(idx+(17:20),1),'double');
             mdh.EKG.data  = [mdh.EKG.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
         elseif channel == 5
             mdh.PULS.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'));
         elseif channel == 8 || channel == 6 || channel == 7
             mdh.RESP.data = [mdh.RESP.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
         elseif channel == 9 || channel == 10
+            mdh.EXT.TimeStamp  = timeStamp40;
             mdh.EXT.data  = [mdh.EXT.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
         elseif channel == 35
             mdh.CardPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'));
@@ -1040,37 +1043,29 @@ elseif(strncmp(VerString,'XA',2))
     while (idx < size(data_uint32,1))
         channel = data_uint32(idx+1);
         if channel == 0 || channel == 1 || channel == 2 || channel == 3
-            mdh.EKG.data  = [mdh.EKG.data; vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:))];
+            mdh.EKG.data  = [mdh.EKG.data, vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),timeStart:end))];
         elseif channel == 4
-            mdh.PULS.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:));
-            mdh.PULS.data = mdh.PULS.data(end-length(timeStamp20)+1:end,:);
+            mdh.PULS.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),timeStart:end));
         elseif channel == 5
-            mdh.RESP.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:));
-            mdh.RESP.data = mdh.RESP.data(end-length(timeStamp05)+1:end,:);
+            mdh.RESP.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),timeStart:end));
         elseif channel == 6 || channel == 7
-            mdh.EXT.data  = [mdh.EXT.data; vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:))];
+            mdh.EXT.TimeStamp = timeStamp05;
+            mdh.EXT.data  = [mdh.EXT.data, vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),timeStart:end))];
         elseif channel == 9
-            mdh.CardPT.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:));
-            mdh.CardPT.data = mdh.CardPT.data(end-length(timeStamp40)+1:end,:);
+            mdh.CardPT.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),timeStart:end));
         elseif channel == 10
-            mdh.RespPT.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:));
-            mdh.RespPT.data = mdh.RespPT.data(end-length(timeStamp40)+1:end,:);
+            mdh.RespPT.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),timeStart:end));
         elseif channel == 8
-            mdh.EVNT.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),:));
-            mdh.EVNT.data = mdh.EVNT.data(end-length(timeStamp40)+1:end,:);
+            mdh.EVNT.data = vec(data_uint32(idx+2+(1:1000/data_uint32(idx+2)),timeStart:end));
         end
         idx = idx + 2 + 1000/data_uint32(idx+2);
     end
-    mdh.EKG.data  = reshape(mdh.EKG.data,40*Nmeas,[]);
-    mdh.EXT.data  = reshape(mdh.EXT.data, 5*Nmeas,[]);
-    mdh.EKG.data = mdh.EKG.data(end-length(timeStamp40)+1:end,:);
-    mdh.EXT.data = mdh.EXT.data(end-length(timeStamp05)+1:end,:);
 elseif(size(data_uint16,1)>342)
     mdh.EKG.data  = [vec(data_uint16(1:2:80,:)) vec(data_uint16(85:2:164,:)) vec(data_uint16(169:2:248,:)) vec(data_uint16(253:2:332,:))];
     mdh.PULS.data = vec(data_uint16(337:2:376,:));
     mdh.RESP.data = vec(data_uint16(381:2:390,:));
-    mdh.EXT.data  = [vec(data_uint16(395:2:404,:)) vec(data_uint16(409:2:418,:))];
-    
+    mdh.EXT.TimeStamp = timeStamp05;
+    mdh.EXT.data  = [vec(data_uint16(395:2:404,:)) vec(data_uint16(409:2:418,:))];  
     try
         mdh.EVNT.data = vec(data_uint16(423:2:502,:));
         mdh.EVNT.data = mdh.EVNT.data(end-length(timeStamp40)+1:end,:);
@@ -1158,6 +1153,7 @@ catch errormsg
 end
 
 end % of evalMDH_syncData()
+
 
 
 
