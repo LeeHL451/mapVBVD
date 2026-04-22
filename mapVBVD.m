@@ -1006,26 +1006,29 @@ if (strncmp(VerString,'XA61',4))
     % idx+2 - physio signal size of one sample in bytes
     % idx+3 - segment length in bytes
     % idx+4 - physio signal number of samples
+    nCols = size(data_uint16,2) - timeStart + 1;
     idx = 0;
     while (idx < size(data_uint16,1))
-        channel = typecast(data_uint16(idx+1,1),'uint8'); channel = channel(1);
-        if channel == 1 || channel == 2 || channel == 3 || channel == 4
+        refValue = reshape(typecast(vec(data_uint16(idx+(9:12),timeStart:end)),'double'),1,[]);
 %             divisor = typecast(data_uint16(idx+(13:16),1),'double');
 %             offset  = typecast(data_uint16(idx+(17:20),1),'double');
-            mdh.EKG.data  = [mdh.EKG.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
+        channel = typecast(data_uint16(idx+1,1),'uint8'); channel = channel(1);
+        if channel == 1 || channel == 2 || channel == 3 || channel == 4
+
+            mdh.EKG.data  = [mdh.EKG.data, vec(reshape(typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'),[],nCols)+refValue)];
         elseif channel == 5
-            mdh.PULS.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'));
+            mdh.PULS.data = vec(reshape(typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'),[],nCols)+refValue);
         elseif channel == 8 || channel == 6 || channel == 7
-            mdh.RESP.data = [mdh.RESP.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
+            mdh.RESP.data = [mdh.RESP.data, vec(reshape(typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'),[],nCols)+refValue)];
         elseif channel == 9 || channel == 10
             mdh.EXT.TimeStamp  = timeStamp40;
-            mdh.EXT.data  = [mdh.EXT.data, (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'))];
+            mdh.EXT.data  = [mdh.EXT.data, vec(reshape(typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'),[],nCols)+refValue)];
         elseif channel == 35
-            mdh.CardPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'));
+            mdh.CardPT.data = vec(reshape(typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'),[],nCols)+refValue);
         elseif channel == 36
-            mdh.RespPT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'));
+            mdh.RespPT.data = vec(reshape(typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'),[],nCols)+refValue);
         elseif channel == 49
-            mdh.EVNT.data = (typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),:)),'single'));
+            mdh.EVNT.data = vec(reshape(typecast(vec(data_uint16(idx+20+(1:data_uint16(idx+4)*data_uint16(idx+2)/2),timeStart:end)),'single'),[],nCols)+refValue);
         end
         idx = double(idx + data_uint16(idx+3)/2);
     end
